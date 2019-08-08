@@ -5,22 +5,27 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.squareup.picasso.Picasso;
 
 public class DealActivity extends AppCompatActivity {
     private FirebaseDatabase mFirebaseDatabase;
@@ -30,6 +35,7 @@ public class DealActivity extends AppCompatActivity {
     EditText textDescription;
     EditText textPrice;
     TravelDeal deal;
+    ImageView imageView;
 
 
 
@@ -45,6 +51,7 @@ public class DealActivity extends AppCompatActivity {
         textTitle = findViewById(R.id.textTitle);
         textDescription = findViewById(R.id.textDescription);
         textPrice = findViewById(R.id.textPrice);
+        imageView = findViewById(R.id.imageView);
 
         Intent intent = getIntent();
         TravelDeal deal = (TravelDeal) intent.getSerializableExtra("Deal");
@@ -55,6 +62,8 @@ public class DealActivity extends AppCompatActivity {
         textTitle.setText(deal.getTitle());
         textDescription.setText(deal.getDescription());
         textPrice.setText(deal.getPrice());
+
+        showImage(deal.getImageUrl());
 
         Button buttonImage = findViewById(R.id.buttonImage);
         buttonImage.setOnClickListener(new View.OnClickListener() {
@@ -97,12 +106,14 @@ public class DealActivity extends AppCompatActivity {
             menu.findItem(R.id.delete_menu).setVisible(true);
             menu.findItem(R.id.save_menu).setVisible(true);
             enableEditTexts(true);
+            findViewById(R.id.buttonImage).setEnabled(true);
 
         }
         else{
             menu.findItem(R.id.delete_menu).setVisible(false);
             menu.findItem(R.id.save_menu).setVisible(false);
             enableEditTexts(false);
+            findViewById(R.id.buttonImage).setEnabled(true);
         }
 
         return true;
@@ -122,8 +133,12 @@ public class DealActivity extends AppCompatActivity {
                     while (!uriTask.isSuccessful());
                     Uri downloadUrl = uriTask.getResult();
                     String url = downloadUrl.toString();
-
+                    String pictureName = taskSnapshot.getStorage().getPath();
+                    deal.setImageName(pictureName);
                     deal.setImageUrl(url);
+                    Log.d("Url:", url);
+                    Log.d("Name", pictureName);
+                    showImage(url);
                 }
             });
         }
@@ -147,6 +162,20 @@ public class DealActivity extends AppCompatActivity {
             return;
         }
         mDatabaseReference.child(deal.getId()).removeValue();
+        if (deal.getImageName() != null && deal.getImageName().isEmpty() == false){
+            StorageReference picRef = FirebaseUtil.mStorage.getReference().child(deal.getImageName());
+            picRef.delete().addOnSuccessListener(new OnSuccessListener<Void>() {
+                @Override
+                public void onSuccess(Void aVoid) {
+                    Log.d ("Delete Image", "Image Successfully Deleted");
+                }
+            }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+                    Log.d ("Delete Image", e.getMessage());
+                }
+            });
+        }
     }
 
     private void backToList() {
@@ -166,5 +195,17 @@ public class DealActivity extends AppCompatActivity {
         textTitle.setEnabled(isEnabled);
         textDescription.setEnabled(isEnabled);
         textPrice.setEnabled(isEnabled);
+    }
+
+    private void showImage(String url) {
+        if (url != null && !url.isEmpty()) {
+            // Getting the width of the device
+            int width = Resources.getSystem().getDisplayMetrics().widthPixels;
+            Picasso.get()
+                    .load(url)
+                    .resize(width, width * 2 / 3)
+                    .centerCrop()
+                    .into(imageView);
+        }
     }
 }
