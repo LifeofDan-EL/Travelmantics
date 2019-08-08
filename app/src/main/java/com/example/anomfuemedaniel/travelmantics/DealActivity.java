@@ -1,24 +1,31 @@
 package com.example.anomfuemedaniel.travelmantics;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 public class DealActivity extends AppCompatActivity {
     private FirebaseDatabase mFirebaseDatabase;
     private DatabaseReference mDatabaseReference;
-
+    private static final int PICTURE_RESULT = 42;
     EditText textTitle;
     EditText textDescription;
     EditText textPrice;
@@ -29,9 +36,9 @@ public class DealActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_insert);
+        setContentView(R.layout.activity_deal);
 
-        FirebaseUtil.openFbReference("traveldeals", this);
+        //FirebaseUtil.openFbReference("traveldeals", );
         mFirebaseDatabase = FirebaseUtil.mFirebaseDatabase;
         mDatabaseReference = FirebaseUtil.mDatabaseReference;
 
@@ -48,6 +55,17 @@ public class DealActivity extends AppCompatActivity {
         textTitle.setText(deal.getTitle());
         textDescription.setText(deal.getDescription());
         textPrice.setText(deal.getPrice());
+
+        Button buttonImage = findViewById(R.id.buttonImage);
+        buttonImage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/jpeg");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(intent.createChooser(intent, "Insert Picture "), PICTURE_RESULT);
+            }
+        });
 
     }
 
@@ -75,7 +93,40 @@ public class DealActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.save_menu, menu);
+        if (FirebaseUtil.isAdmin){
+            menu.findItem(R.id.delete_menu).setVisible(true);
+            menu.findItem(R.id.save_menu).setVisible(true);
+            enableEditTexts(true);
+
+        }
+        else{
+            menu.findItem(R.id.delete_menu).setVisible(false);
+            menu.findItem(R.id.save_menu).setVisible(false);
+            enableEditTexts(false);
+        }
+
         return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PICTURE_RESULT && resultCode == RESULT_OK){
+            Uri imageUri = data.getData();
+            StorageReference ref = FirebaseUtil.mStorageRef.child(imageUri.getLastPathSegment());
+
+            ref.putFile(imageUri).addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    Task <Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
+                    while (!uriTask.isSuccessful());
+                    Uri downloadUrl = uriTask.getResult();
+                    String url = downloadUrl.toString();
+
+                    deal.setImageUrl(url);
+                }
+            });
+        }
     }
 
     private void saveDeal (){
@@ -109,5 +160,11 @@ public class DealActivity extends AppCompatActivity {
         textDescription.setText("");
         textTitle.requestFocus();
 
+    }
+
+    private void enableEditTexts(boolean isEnabled) {
+        textTitle.setEnabled(isEnabled);
+        textDescription.setEnabled(isEnabled);
+        textPrice.setEnabled(isEnabled);
     }
 }
