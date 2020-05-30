@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Firebase - Travelmantics app
 
 
