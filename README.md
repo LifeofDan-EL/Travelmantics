@@ -1,9 +1,10 @@
+<<<<<<< HEAD
 # Firebase - Travelmantics app
 
 
 ## Travelmantics
 
-The travelmantics app is a demo app that helps you seen a list of travel deals.
+The travelmantics app is a demo app that helps you seen a list of travel deals. Part of ALC4.0 second challenge for Learning Phase 1.
 
 
 This app demonstrates the use of Firebase.
@@ -17,5 +18,4 @@ This app demonstrates the use of Firebase.
 
 ## Report Issues
 Notice any issues with a repository? Please file a github issue in the repository.
-
 
